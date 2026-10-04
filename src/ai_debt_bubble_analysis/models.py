@@ -32,6 +32,7 @@ class CompanySnapshot:
     ai_exposure: float
     market_cap: float | None
     shares_outstanding: float | None
+    ai_weighted_market_cap: float | None
     assets: float | None
     liabilities: float | None
     debt: float | None
@@ -40,6 +41,7 @@ class CompanySnapshot:
     capex: float | None
     debt_to_assets: float | None
     commitment_score: float
+    commitment_mentions: int
     return_1y: float | None
     max_drawdown: float | None
     risk_score: float
