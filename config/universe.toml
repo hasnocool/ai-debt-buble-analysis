@@ -1,0 +1,74 @@
+# config/universe.toml
+# CIK values are zero-padded SEC identifiers.
+
+[[companies]]
+ticker = "META"
+name = "Meta Platforms"
+cik = "0001326801"
+sector = "Hyperscaler"
+ai_exposure = 1.00
+
+[[companies]]
+ticker = "MSFT"
+name = "Microsoft"
+cik = "0000789019"
+sector = "Hyperscaler"
+ai_exposure = 1.00
+
+[[companies]]
+ticker = "AMZN"
+name = "Amazon"
+cik = "0001018724"
+sector = "Hyperscaler"
+ai_exposure = 0.95
+
+[[companies]]
+ticker = "GOOGL"
+name = "Alphabet"
+cik = "0001652044"
+sector = "Hyperscaler"
+ai_exposure = 1.00
+
+[[companies]]
+ticker = "ORCL"
+name = "Oracle"
+cik = "0001341439"
+sector = "AI Infrastructure"
+ai_exposure = 0.95
+
+[[companies]]
+ticker = "NVDA"
+name = "NVIDIA"
+cik = "0001045810"
+sector = "AI Compute"
+ai_exposure = 1.00
+
+[[companies]]
+ticker = "AVGO"
+name = "Broadcom"
+cik = "0001730168"
+sector = "AI Compute"
+ai_exposure = 0.90
+
+# FRED public CSV series. No API key is required for these graph downloads.
+[fred]
+series = [
+  "SP500",
+  "VIXCLS",
+  "DGS10",
+  "BAMLH0A0HYM2",
+  "STLFSI4",
+]
+
+[scoring]
+reported_leverage_weight = 0.30
+commitment_pressure_weight = 0.30
+market_heat_weight = 0.20
+drawdown_weight = 0.20
+
+[alerts]
+concentration_top1_pct = 35.0
+high_risk_score = 70.0
+large_drawdown_pct = -20.0
+credit_stress_z = 1.50
+commitment_evidence_threshold = 45.0
