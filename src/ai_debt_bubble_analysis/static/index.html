@@ -1,0 +1,90 @@
+<!-- src/ai_debt_bubble_analysis/static/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Debt Bubble Analysis</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">MARKET WEALTH / SHADOW OBLIGATIONS</div>
+      <h1>AI Debt Bubble Analysis</h1>
+      <p>Follow the money from AI capex to balance sheets, SPVs, credit markets and equity wealth.</p>
+    </div>
+    <button id="refresh">Refresh evidence</button>
+  </header>
+
+  <main>
+    <section id="alerts" class="alerts"></section>
+
+    <section class="cards">
+      <article class="card"><span>MONITORED MARKET VALUE</span><strong id="market-value">—</strong></article>
+      <article class="card"><span>WEALTH AT -20%</span><strong id="wealth-20">—</strong></article>
+      <article class="card"><span>TOP-1 CONCENTRATION</span><strong id="top1">—</strong></article>
+      <article class="card"><span>MACRO STRESS</span><strong id="macro">—</strong></article>
+      <article class="card"><span>HHI</span><strong id="hhi">—</strong></article>
+      <article class="card"><span>LAST REFRESH</span><strong id="updated">—</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <div><h2>Wealth concentration</h2><span>AI-weighted monitored equity value</span></div>
+      </div>
+      <canvas id="wealth-chart" width="1100" height="320"></canvas>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <div><h2>Company risk matrix</h2><span>Signals, not default probabilities</span></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Company</th><th>Market value</th><th>Debt / assets</th>
+              <th>Commitment evidence</th><th>1Y return</th><th>Max drawdown</th><th>Risk</th>
+            </tr>
+          </thead>
+          <tbody id="company-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid-two">
+      <section class="panel">
+        <div class="panel-title">
+          <div><h2>Macro / credit signals</h2><span>FRED public series</span></div>
+        </div>
+        <div id="macro-table" class="signal-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div><h2>Transmission model</h2><span>Why headline debt is not the whole story</span></div>
+        </div>
+        <div class="flow">
+          <div>AI CAPEX</div><i>→</i><div>CORPORATE CASH FLOW</div><i>→</i><div>LEASES / COMMITMENTS</div>
+          <i>→</i><div>SPV / JV</div><i>→</i><div>PRIVATE CREDIT</div><i>→</i><div>INSTITUTIONAL CAPITAL</div>
+          <i>→</i><div>MARKET WEALTH</div>
+        </div>
+        <p class="note">The current release measures the company-side and market-side links. Institutional holder mapping is the next expansion.</p>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <div><h2>Filing evidence</h2><span>Latest 10-K keyword windows</span></div>
+      </div>
+      <div id="evidence"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Research monitor • no investment advice • source evidence should always be opened and verified</span>
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
