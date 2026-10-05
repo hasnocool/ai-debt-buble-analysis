@@ -1,6 +1,7 @@
 # src/ai_debt_bubble_analysis/sources/sec.py
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
@@ -73,9 +74,11 @@ def _latest_fact(
     taxonomy: str,
     tags: tuple[str, ...],
     unit: str,
+    *,
+    annual_only: bool = False,
 ) -> float | None:
     facts = companyfacts.get("facts", {}).get(taxonomy, {})
-    candidates: list[tuple[str, float]] = []
+    candidates: list[tuple[int, str, float]] = []
 
     for tag in tags:
         entries = facts.get(tag, {}).get("units", {}).get(unit, [])
@@ -83,19 +86,22 @@ def _latest_fact(
             form = entry.get("form")
             if form not in {"10-K", "10-Q"}:
                 continue
+            if annual_only and form != "10-K":
+                continue
             end = entry.get("end", "")
             value = entry.get("val")
             if value is None:
                 continue
             try:
-                candidates.append((end, float(value)))
+                form_priority = 1 if form == "10-K" else 0
+                candidates.append((form_priority, end, float(value)))
             except (TypeError, ValueError):
                 continue
 
     if not candidates:
         return None
-    candidates.sort(key=lambda item: item[0])
-    return candidates[-1][1]
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    return candidates[-1][2]
 
 
 def extract_financials(companyfacts: dict[str, Any]) -> Financials:
@@ -104,7 +110,10 @@ def extract_financials(companyfacts: dict[str, Any]) -> Financials:
     equity = _latest_fact(
         companyfacts,
         "us-gaap",
-        ("StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"),
+        (
+            "StockholdersEquity",
+            "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
+        ),
         "USD",
     )
     revenue = _latest_fact(
@@ -112,12 +121,14 @@ def extract_financials(companyfacts: dict[str, Any]) -> Financials:
         "us-gaap",
         ("RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues"),
         "USD",
+        annual_only=True,
     )
     capex = _latest_fact(
         companyfacts,
         "us-gaap",
         ("PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"),
         "USD",
+        annual_only=True,
     )
 
     debt_parts = [
@@ -164,11 +175,7 @@ def _money_candidates(text: str) -> list[dict[str, Any]]:
         scale = match.group("scale")
         value = raw_value * scale_map.get(scale.lower(), 1.0) if scale else raw_value
         out.append(
-            {
-                "value": value,
-                "display": match.group(0),
-                "offset": match.start(),
-            }
+            {"value": value, "display": match.group(0), "offset": match.start()}
         )
         if len(out) >= 30:
             break
@@ -185,12 +192,10 @@ def scan_filing_text(text: str, *, max_snippets: int = 12) -> FilingEvidence:
 
     for term in WATCH_TERMS:
         start = 0
-        term_mentions = 0
         while True:
             idx = lower.find(term, start)
             if idx < 0:
                 break
-            term_mentions += 1
             mentions += 1
             matched_terms.add(term)
             if len(snippets) < max_snippets:
@@ -205,11 +210,10 @@ def scan_filing_text(text: str, *, max_snippets: int = 12) -> FilingEvidence:
     distinct = len(matched_terms)
     score = min(100.0, distinct * 8.0 + min(mentions, 20) * 2.5)
 
-    # De-duplicate money candidates while preserving the earliest evidence.
-    seen: set[tuple[float, int]] = set()
+    seen: set[tuple[float, str]] = set()
     money_unique: list[dict[str, Any]] = []
     for item in money:
-        key = (float(item["value"]), int(item["offset"]))
+        key = (float(item["value"]), str(item["display"]))
         if key not in seen:
             seen.add(key)
             money_unique.append(item)
@@ -227,6 +231,7 @@ def scan_filing_text(text: str, *, max_snippets: int = 12) -> FilingEvidence:
 
 class SECClient:
     def __init__(self, user_agent: str) -> None:
+        self._sem = asyncio.Semaphore(4)
         self._client = httpx.AsyncClient(
             base_url="https://data.sec.gov",
             headers={
@@ -254,12 +259,14 @@ class SECClient:
         await self._archive.aclose()
 
     async def companyfacts(self, cik: str) -> dict[str, Any]:
-        response = await self._client.get(f"/api/xbrl/companyfacts/CIK{cik}.json")
+        async with self._sem:
+            response = await self._client.get(f"/api/xbrl/companyfacts/CIK{cik}.json")
         response.raise_for_status()
         return response.json()
 
     async def submissions(self, cik: str) -> dict[str, Any]:
-        response = await self._client.get(f"/submissions/CIK{cik}.json")
+        async with self._sem:
+            response = await self._client.get(f"/submissions/CIK{cik}.json")
         response.raise_for_status()
         return response.json()
 
@@ -290,7 +297,8 @@ class SECClient:
             return FilingEvidence("10-K", None, None, 0.0, 0, [], [])
 
         form, filed_at, url, _ = latest
-        response = await self._archive.get(url)
+        async with self._sem:
+            response = await self._archive.get(url)
         response.raise_for_status()
         text = html_to_text(response.text)
         evidence = scan_filing_text(text)
