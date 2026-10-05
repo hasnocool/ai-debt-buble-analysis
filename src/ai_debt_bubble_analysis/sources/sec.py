@@ -78,7 +78,7 @@ def _latest_fact(
     annual_only: bool = False,
 ) -> float | None:
     facts = companyfacts.get("facts", {}).get(taxonomy, {})
-    candidates: list[tuple[int, str, float]] = []
+    candidates: list[tuple[str, float]] = []
 
     for tag in tags:
         entries = facts.get(tag, {}).get("units", {}).get(unit, [])
@@ -93,15 +93,14 @@ def _latest_fact(
             if value is None:
                 continue
             try:
-                form_priority = 1 if form == "10-K" else 0
-                candidates.append((form_priority, end, float(value)))
+                candidates.append((end, float(value)))
             except (TypeError, ValueError):
                 continue
 
     if not candidates:
         return None
-    candidates.sort(key=lambda item: (item[0], item[1]))
-    return candidates[-1][2]
+    candidates.sort(key=lambda item: item[0])
+    return candidates[-1][1]
 
 
 def extract_financials(companyfacts: dict[str, Any]) -> Financials:
