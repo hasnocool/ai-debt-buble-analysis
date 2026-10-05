@@ -37,25 +37,25 @@ def html_to_text(html: str) -> str:
     return re.sub(r"\s+", " ", " ".join(parser.parts)).strip()
 
 
-WATCH_TERMS = (
-    "purchase obligations",
-    "unconditional purchase",
-    "minimum lease payments",
-    "operating lease",
-    "finance lease",
-    "residual value guarantee",
-    "residual value support",
-    "variable interest entity",
-    "special purpose vehicle",
-    "special-purpose vehicle",
-    "joint venture",
-    "capacity agreement",
-    "take-or-pay",
-    "data center",
-    "data centre",
-    "commitment",
-    "guarantee",
-)
+WATCH_TERM_WEIGHTS = {
+    "purchase obligations": 14.0,
+    "unconditional purchase": 14.0,
+    "minimum lease payments": 14.0,
+    "operating lease": 7.0,
+    "finance lease": 9.0,
+    "residual value guarantee": 16.0,
+    "residual value support": 16.0,
+    "variable interest entity": 16.0,
+    "special purpose vehicle": 16.0,
+    "special-purpose vehicle": 16.0,
+    "joint venture": 10.0,
+    "capacity agreement": 12.0,
+    "take-or-pay": 12.0,
+    "data center": 5.0,
+    "data centre": 5.0,
+    "commitment": 1.0,
+    "guarantee": 2.0,
+}
 
 
 @dataclass(slots=True)
@@ -189,7 +189,7 @@ def scan_filing_text(text: str, *, max_snippets: int = 12) -> FilingEvidence:
     matched_terms: set[str] = set()
     mentions = 0
 
-    for term in WATCH_TERMS:
+    for term in WATCH_TERM_WEIGHTS:
         start = 0
         while True:
             idx = lower.find(term, start)
@@ -206,8 +206,16 @@ def scan_filing_text(text: str, *, max_snippets: int = 12) -> FilingEvidence:
                     money.extend(_money_candidates(snippet))
             start = idx + len(term)
 
-    distinct = len(matched_terms)
-    score = min(100.0, distinct * 8.0 + min(mentions, 20) * 2.5)
+    score = sum(WATCH_TERM_WEIGHTS[term] for term in matched_terms)
+    # Generic terms should add little signal even when they occur many times.
+    generic_mentions = sum(
+        1
+        for term in ("commitment", "guarantee")
+        for _ in range(1)
+        if term in matched_terms
+    )
+    score += min(mentions, 20) * 1.5 + generic_mentions * 1.0
+    score = min(100.0, score)
 
     seen: set[tuple[float, str]] = set()
     money_unique: list[dict[str, Any]] = []
