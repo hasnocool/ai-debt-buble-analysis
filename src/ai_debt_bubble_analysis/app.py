@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .config import load_config
 from .service import AnalysisEngine
@@ -37,6 +38,7 @@ app = FastAPI(
     description="Market wealth, leverage and shadow-obligation monitor.",
     lifespan=lifespan,
 )
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
 @app.get("/")
